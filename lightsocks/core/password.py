@@ -16,7 +16,7 @@ def validatePassword(password: bytearray) -> bool:
 
 def loadsPassword(passwordString: str) -> bytearray:
     try:
-        password = base64.decodebytes(
+        password = base64.urlsafe_b64decode(
             passwordString.encode('utf8', errors='strict'))
         password = bytearray(password)
     except:
@@ -24,14 +24,14 @@ def loadsPassword(passwordString: str) -> bytearray:
 
     if not validatePassword(password):
         raise InvalidPasswordError
-    
+
     return password
 
 
 def dumpsPassword(password: bytearray) -> str:
     if not validatePassword(password):
         raise InvalidPasswordError
-    return base64.encodebytes(password).decode('utf8', errors='strict')
+    return base64.urlsafe_b64encode(password).decode('utf8', errors='strict')
 
 
 def randomPassword() -> bytearray:
