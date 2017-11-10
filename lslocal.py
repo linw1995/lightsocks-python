@@ -4,21 +4,25 @@ import sys
 
 from lightsocks.core.password import InvalidPasswordError, loadsPassword
 from lightsocks.local import LsLocal
-from lightsocks.utils.config import (Config, InvalidFileError, InvalidURLError,
-                                     load, loadURL)
+from lightsocks.utils import config as lsConfig
 from lightsocks.utils import net
 
 
-def run_server(config: Config):
+def run_server(config: lsConfig.Config):
     loop = asyncio.get_event_loop()
 
     listenAddr = net.Address(config.localAddr, config.localPort)
     remoteAddr = net.Address(config.serverAddr, config.localAddr)
-    server = LsLocal(loop=loop,
-                     password=config.password,
-                     listenAddr=listenAddr,
-                     remoteAddr=remoteAddr)
-    asyncio.ensure_future(server.listen())
+    server = LsLocal(
+        loop=loop,
+        password=config.password,
+        listenAddr=listenAddr,
+        remoteAddr=remoteAddr)
+
+    def didListen(address):
+        print('Listen to %s:%d\n' % address)
+
+    asyncio.ensure_future(server.listen(didListen))
     loop.run_forever()
 
 
@@ -33,6 +37,8 @@ def main():
 
     proxy_options = parser.add_argument_group('Proxy options')
 
+    proxy_options.add_argument(
+        '--save', metavar='CONFIG', help='path to dump config')
     proxy_options.add_argument(
         '-c', metavar='CONFIG', help='path to config file')
     proxy_options.add_argument(
@@ -51,10 +57,7 @@ def main():
         metavar='LOCAL_ADDR',
         help='local binding address, default: 127.0.0.1')
     proxy_options.add_argument(
-        '-l',
-        metavar='LOCAL_PORT',
-        type=int,
-        help='local port, default: 1080')
+        '-l', metavar='LOCAL_PORT', type=int, help='local port, default: 1080')
     proxy_options.add_argument('-k', metavar='PASSWORD', help='password')
 
     args = parser.parse_args()
@@ -63,20 +66,26 @@ def main():
         print('lightsocks 0.1.0')
         sys.exit(0)
 
-    config = Config(None, None, None, None, None)
+    config = lsConfig.Config(None, None, None, None, None)
     if args.c:
-        with open(args.c, encoding='utf-8') as f:
-            try:
-                file_config = load(f)
-            except InvalidFileError:
-                print(f'invalid config file {args.c!r}')
-                sys.exit(1)
+        try:
+            with open(args.c, encoding='utf-8') as f:
+                file_config = lsConfig.load(f)
+        except lsConfig.InvalidFileError:
+            parser.print_usage()
+            print(f'invalid config file {args.c!r}')
+            sys.exit(1)
+        except FileNotFoundError:
+            parser.print_usage()
+            print(f'config file {args.c!r} not found')
+            sys.exit(1)
         config = config._replace(**file_config._asdict())
 
     if args.u:
         try:
-            url_config = loadURL(args.u)
-        except InvalidURLError:
+            url_config = lsConfig.loadURL(args.u)
+        except lsConfig.InvalidURLError:
+            parser.print_usage()
             print(f'invalid config URL {args.u!r}')
             sys.exit(1)
 
@@ -107,6 +116,7 @@ def main():
             password = loadsPassword(args.k)
             config = config._replace(password=password)
         except InvalidPasswordError:
+            parser.print_usage()
             print('invalid password')
             sys.exit(1)
 
@@ -120,11 +130,18 @@ def main():
         config = config._replace(serverPort=8388)
 
     if config.password is None:
+        parser.print_usage()
         print('need PASSWORD, please use [-k PASSWORD]')
         sys.exit(1)
 
     if config.serverAddr is None:
+        parser.print_usage()
         print('need SERVER_ADDR, please use [-s SERVER_ADDR]')
+
+    if args.save:
+        print(f'dump config file into {args.save!r}')
+        with open(args.save, 'w', encoding='utf-8') as f:
+            lsConfig.dump(f, config)
 
     run_server(config)
 
