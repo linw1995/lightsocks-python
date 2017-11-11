@@ -1,5 +1,5 @@
-import typing
 import json
+import typing
 from collections import namedtuple
 from urllib.parse import urlparse
 

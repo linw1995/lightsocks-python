@@ -2,7 +2,8 @@ import argparse
 import asyncio
 import sys
 
-from lightsocks.core.password import InvalidPasswordError, loadsPassword, dumpsPassword
+from lightsocks.core.password import (InvalidPasswordError, dumpsPassword,
+                                      loadsPassword)
 from lightsocks.server import LsServer
 from lightsocks.utils import config as lsConfig
 from lightsocks.utils import net

@@ -12,7 +12,7 @@ def run_server(config: lsConfig.Config):
     loop = asyncio.get_event_loop()
 
     listenAddr = net.Address(config.localAddr, config.localPort)
-    remoteAddr = net.Address(config.serverAddr, config.localAddr)
+    remoteAddr = net.Address(config.serverAddr, config.serverPort)
     server = LsLocal(
         loop=loop,
         password=config.password,
@@ -88,7 +88,6 @@ def main():
             parser.print_usage()
             print(f'invalid config URL {args.u!r}')
             sys.exit(1)
-
         config = config._replace(**url_config._asdict())
 
     if args.s:
