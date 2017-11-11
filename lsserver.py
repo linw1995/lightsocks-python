@@ -3,7 +3,7 @@ import asyncio
 import sys
 
 from lightsocks.core.password import (InvalidPasswordError, dumpsPassword,
-                                      loadsPassword)
+                                      loadsPassword, randomPassword)
 from lightsocks.server import LsServer
 from lightsocks.utils import config as lsConfig
 from lightsocks.utils import net
@@ -50,6 +50,11 @@ def main():
         type=int,
         help='server port, default: 8388')
     proxy_options.add_argument('-k', metavar='PASSWORD', help='password')
+    proxy_options.add_argument(
+        '--random',
+        action='store_true',
+        default=False,
+        help='generate a random password to use')
 
     args = parser.parse_args()
 
@@ -97,10 +102,15 @@ def main():
     if config.serverPort is None:
         config = config._replace(serverPort=8388)
 
-    if config.password is None:
+    if config.password is None and not args.random:
         parser.print_usage()
-        print('need PASSWORD, please use [-k PASSWORD]')
+        print('need PASSWORD, please use [-k PASSWORD] or '
+              'use [--random] to generate a random password')
         sys.exit(1)
+
+    if args.random:
+        print('generate random password')
+        config = config._replace(password=randomPassword())
 
     if args.save:
         print(f'dump config file into {args.save!r}')
