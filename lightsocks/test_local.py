@@ -12,10 +12,12 @@ class TestLsLocal(unittest.TestCase):
     def setUp(self):
         self.listenAddr = net.Address('127.0.0.1', 11111)
         self.remoteAddr = net.Address('127.0.0.1', 22222)
+
         self.remoteServer = socket.socket()
         self.remoteServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.remoteServer.bind(self.remoteAddr)
-        self.remoteServer.listen(1)
+        self.remoteServer.listen(socket.SOMAXCONN)
+        self.remoteServer.setblocking(False)
 
         password = randomPassword()
         self.cipher = Cipher.NewCipher(password)
@@ -34,6 +36,21 @@ class TestLsLocal(unittest.TestCase):
         self.remoteServer.close()
         self.loop.close()
 
+    def test_dialRemote(self):
+        async def test():
+            with await self.local.dialRemote() as connection:
+                self.loop.sock_sendall(connection, self.msg)
+                remoteConn, _ = await self.loop.sock_accept(self.remoteServer)
+                received_msg = await self.loop.sock_recv(remoteConn, 1024)
+                remoteConn.close()
+                self.assertEqual(received_msg, self.msg)
+
+        self.loop.run_until_complete(test())
+
+        with self.assertRaises(ConnectionError):
+            self.local.remoteAddr = net.Address('127.0.0.1', 0)
+            self.loop.run_until_complete(self.local.dialRemote())
+
     def test_run(self):
         def didListen(address):
 
@@ -46,12 +63,14 @@ class TestLsLocal(unittest.TestCase):
 
             async def call_later():
                 conn, _ = await self.loop.sock_accept(self.remoteServer)
-                received_msg = await self.loop.sock_recv(conn, 1024)
-                conn.close()
+                with conn:
+                    received_msg = await self.loop.sock_recv(conn, 1024)
+
+                await asyncio.sleep(0.001)
+                await asyncio.sleep(0.001)
 
                 self.assertEqual(received_msg, self.encrypted_msg)
 
-                await asyncio.sleep(0.1)
                 self.loop.stop()
 
             asyncio.ensure_future(call_later(), loop=self.loop)

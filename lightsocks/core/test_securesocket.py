@@ -5,7 +5,6 @@ import unittest
 from lightsocks.core.cipher import Cipher
 from lightsocks.core.password import randomPassword
 from lightsocks.core.securesocket import SecureSocket
-from lightsocks.utils import net
 
 
 class TestSecuresocket(unittest.TestCase):
@@ -23,32 +22,6 @@ class TestSecuresocket(unittest.TestCase):
         self.loop.close()
         self.ls_local.close()
         self.ls_server.close()
-
-    def test_dialRemote(self):
-        remoteServer = socket.socket()
-        remoteServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-        address = net.Address('127.0.0.1', 11111)
-        remoteServer.bind(address)
-        remoteServer.listen(1)
-
-        self.securesocket.remoteAddr = address
-
-        localServer = self.securesocket.dialRemote()
-        localServer.setblocking(True)
-        localServer.send(self.msg)
-
-        remoteConn, _ = remoteServer.accept()
-        received_msg = remoteConn.recv(1024)
-
-        self.assertEqual(received_msg, self.msg)
-
-        with self.assertRaises(Exception):
-            self.securesocket.remoteAddr = net.Address('127.0.0.1', 0)
-            self.securesocket.dialRemote()
-
-        localServer.close()
-        remoteServer.close()
 
     def test_decodeRead(self):
 

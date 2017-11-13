@@ -15,19 +15,18 @@ class LsServer(SecureSocket):
     def __init__(self,
                  loop: asyncio.AbstractEventLoop,
                  password: bytearray,
-                 listenAddr: net.Address):
-        super().__init__(
-            loop=loop,
-            cipher=Cipher.NewCipher(encodePassword=password),
-            listenAddr=listenAddr)
+                 listenAddr: net.Address) -> None:
+        super().__init__(loop=loop, cipher=Cipher.NewCipher(password))
+        self.listenAddr = listenAddr
 
     async def listen(self, didListen: typing.Callable=None):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
             listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            listener.bind(self.listenAddr)
-            listener.listen(10)
             listener.setblocking(False)
+            listener.bind(self.listenAddr)
+            listener.listen(socket.SOMAXCONN)
 
+            logger.info('Listen to %s:%d' % self.listenAddr)
             if didListen:
                 didListen(listener.getsockname())
 
@@ -38,7 +37,7 @@ class LsServer(SecureSocket):
 
     async def handleConn(self, connection: Connection):
         buf = await self.decodeRead(connection)
-        if buf[0] != 0x05:
+        if not buf or buf[0] != 0x05:
             connection.close()
             return
 
@@ -55,36 +54,50 @@ class LsServer(SecureSocket):
 
         dstIP = None
 
+        dstPort = buf[-2:]
+        dstPort = int(dstPort.hex(), 16)
+
+        dstFamily = None
+
         if buf[3] == 0x01:
-            dstIP = buf[4:4 + 4]
-            dstIP = '.'.join(map(str, dstIP))
+            # ipv4
+            dstIP = socket.inet_ntop(socket.AF_INET, buf[4:4 + 4])
+            dstAddress = net.Address(ip=dstIP, port=dstPort)
+            dstFamily = socket.AF_INET
         elif buf[3] == 0x03:
+            # domain
             dstIP = buf[4:-2].decode()
+            dstAddress = net.Address(ip=dstIP, port=dstPort)
         elif buf[3] == 0x04:
-            dstIP = buf[4: 4 + 16]
-            dstIP = ':'.join(map(lambda x: hex(x)[2:], dstIP))
+            # ipv6
+            dstIP = socket.inet_ntop(socket.AF_INET6, buf[4:4 + 16])
+            dstAddress = (dstIP, dstPort, 0, 0)
+            dstFamily = socket.AF_INET6
         else:
             connection.close()
             return
 
-        dstPort = buf[-2:]
-        dstPort = int(dstPort.hex(), 16)
-
-        dstAddress = net.Address(ip=dstIP, port=dstPort)
-        dstServer = socket.create_connection(dstAddress)
+        if dstFamily:
+            dstServer = socket.socket(
+                family=dstFamily, type=socket.SOCK_STREAM)
+            dstServer.connect(dstAddress)
+        else:
+            dstServer = socket.create_connection(dstAddress)
         dstServer.setblocking(False)
+
+        await self.encodeWrite(connection,
+                               bytearray((0x05, 0x00, 0x00, 0x01, 0x00, 0x00,
+                                          0x00, 0x00, 0x00, 0x00)))
 
         def cleanUp(task):
             dstServer.close()
             connection.close()
 
-        await self.encodeWrite(connection,
-                               bytearray((0x05, 0x00, 0x00, 0x01, 0x00, 0x00,
-                                          0x00, 0x00, 0x00, 0x00)))
         conn2dst = asyncio.ensure_future(
             self.decodeCopy(dstServer, connection))
         dst2conn = asyncio.ensure_future(
             self.encodeCopy(connection, dstServer))
         task = asyncio.ensure_future(
-            asyncio.gather(conn2dst, dst2conn, return_exceptions=True))
+            asyncio.gather(
+                conn2dst, dst2conn, loop=self.loop, return_exceptions=True))
         task.add_done_callback(cleanUp)
