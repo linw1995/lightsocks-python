@@ -41,6 +41,9 @@ class LsLocal(SecureSocket):
         remoteServer = await self.dialRemote()
 
         def cleanUp(task):
+            """
+            Close the socket when they succeeded or had an exception.
+            """
             remoteServer.close()
             connection.close()
 
@@ -57,6 +60,9 @@ class LsLocal(SecureSocket):
         task.add_done_callback(cleanUp)
 
     async def dialRemote(self):
+        """
+        Create a socket that connects to the Remote Server.
+        """
         try:
             remoteConn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             remoteConn.setblocking(False)

@@ -1,3 +1,7 @@
+"""
+    this module is for producing a valid password
+    that for Cipher to encode and decode the data flow.
+"""
 import random
 import base64
 

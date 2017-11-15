@@ -1,4 +1,4 @@
-[![license](https://img.shields.io/github/license/linw1995/lightsocks-python.svg)](https://github.com/linw1995/lightsocks-python)
+[![license](https://img.shields.io/github/license/linw1995/lightsocks-python.svg)](https://github.com/linw1995/lightsocks-python/blob/master/LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/linw1995/lightsocks-python.svg)](https://github.com/linw1995/lightsocks-python)
 [![Build Status](https://travis-ci.org/linw1995/lightsocks-python.svg?branch=master)](https://travis-ci.org/linw1995/lightsocks-python)
 [![Coverage Status](https://coveralls.io/repos/github/linw1995/lightsocks-python/badge.svg)](https://coveralls.io/github/linw1995/lightsocks-python)

@@ -172,7 +172,7 @@ class TestLsServer(unittest.TestCase):
                 dstServer = socket.socket(socket.AF_INET6)
                 dstPort = getValidAddr()[1]
                 dstServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                dstServer.bind(('::1', dstPort, 0, 0))
+                dstServer.bind(('', dstPort))
                 dstServer.listen(socket.SOMAXCONN)
                 dstServer.setblocking(False)
 
