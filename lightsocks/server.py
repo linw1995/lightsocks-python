@@ -125,7 +125,7 @@ class LsServer(SecureSocket):
             dstFamily = socket.AF_INET
         elif buf[3] == 0x03:
             # domain
-            dstIP = buf[4:-2].decode()
+            dstIP = buf[5:-2].decode()
             dstAddress = net.Address(ip=dstIP, port=dstPort)
         elif buf[3] == 0x04:
             # ipv6

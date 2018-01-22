@@ -119,7 +119,7 @@ class TestLsServer(unittest.TestCase):
 
                 self.assertEqual(received_msg, bytearray([0x05, 0x00]))
 
-                msg = bytearray((0x05, 0x01, 0x01, 0x03))
+                msg = bytearray((0x05, 0x01, 0x01, 0x03, 0x11))
                 msg.extend(b'127.0.0.1')
                 msg.extend(dstAddress[1].to_bytes(2, 'big'))
                 self.cipher.encode(msg)
