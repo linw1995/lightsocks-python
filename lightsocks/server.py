@@ -136,13 +136,33 @@ class LsServer(SecureSocket):
             connection.close()
             return
 
+        dstServer = None
         if dstFamily:
-            dstServer = socket.socket(
-                family=dstFamily, type=socket.SOCK_STREAM)
-            dstServer.connect(dstAddress)
+            try:
+                dstServer = socket.socket(
+                    family=dstFamily, type=socket.SOCK_STREAM)
+                dstServer.setblocking(False)
+                await self.loop.sock_connect(dstServer, dstAddress)
+            except OSError:
+                if dstServer is not None:
+                    dstServer.close()
+                    dstServer = None
         else:
-            dstServer = socket.create_connection(dstAddress)
-        dstServer.setblocking(False)
+            host, port = dstAddress
+            for res in await self.loop.getaddrinfo(host, port):
+                dstFamily, socktype, proto, _, dstAddress = res
+                try:
+                    dstServer = socket.socket(dstFamily, socktype, proto)
+                    dstServer.setblocking(False)
+                    await self.loop.sock_connect(dstServer, dstAddress)
+                    break
+                except OSError:
+                    if dstServer is not None:
+                        dstServer.close()
+                        dstServer = None
+
+        if dstFamily is None:
+            return
         """
         The SOCKS request information is sent by the client as soon as it has
         established a connection to the SOCKS server, and completed the
