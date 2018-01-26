@@ -39,7 +39,7 @@ class TestLsLocal(unittest.TestCase):
     def test_dialRemote(self):
         async def test():
             with await self.local.dialRemote() as connection:
-                self.loop.sock_sendall(connection, self.msg)
+                await self.loop.sock_sendall(connection, self.msg)
                 remoteConn, _ = await self.loop.sock_accept(self.remoteServer)
                 received_msg = await self.loop.sock_recv(remoteConn, 1024)
                 remoteConn.close()
